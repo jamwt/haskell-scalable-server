@@ -1,0 +1,39 @@
+Name:                scalable-server
+
+Synopsis:            Library for writing fast/scalable TCP-based services in Haskell
+Description:         Library for writing fast/scalable TCP-based services in Haskell
+
+Version:             0.1
+
+License:             BSD3
+
+License-file:        LICENSE
+
+Author:              Jamie Turner
+
+Maintainer:          jamie@bu.mp
+
+Category:            Network
+Build-type:          Simple
+
+Extra-source-files: example.hs
+
+Cabal-version:       >=1.2
+
+
+Library
+  Exposed-modules:     Network.Server.ScalableServer
+
+  hs-source-dirs:      src
+
+  Build-depends: base >=4 && <5,
+                 stm,
+                 bytestring >=0.9,
+                 attoparsec >=0.7.2,
+                 enumerator,
+                 attoparsec-enumerator,
+                 network>=2.0,
+                 mtl>=2,
+                 blaze-builder>=0.3
+
+  ghc-options:   -O2 -rtsopts -threaded -funfolding-use-threshold=16 -fexcess-precision -feager-blackholing
