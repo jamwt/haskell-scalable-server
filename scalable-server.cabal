@@ -36,4 +36,4 @@ Library
                  mtl>=2,
                  blaze-builder>=0.3
 
-  ghc-options:   -O2 -rtsopts -threaded -funfolding-use-threshold=16 -fexcess-precision -feager-blackholing
+  ghc-options:   -O2
