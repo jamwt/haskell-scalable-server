@@ -1,7 +1,7 @@
 Name:                scalable-server
 
-Synopsis:            Library for writing fast/scalable TCP-based services in Haskell
-Description:         Library for writing fast/scalable TCP-based services in Haskell
+Synopsis:            Library for writing fast/scalable TCP-based services
+Description:         Library for writing fast/scalable TCP-based services
 
 Version:             0.1
 
