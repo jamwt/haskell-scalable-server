@@ -1,4 +1,8 @@
-module Network.Server.ScalableServer (runServer,
+module Network.Server.ScalableServer (
+    -- * Introduction
+    -- $intro
+
+    runServer,
     RequestPipeline(..), RequestCreator,
     RequestProcessor) where
 
@@ -24,6 +28,8 @@ import qualified Data.ByteString.Char8 as S
 import qualified Data.ByteString as WS
 import qualified Data.ByteString.Lazy.Char8 as B
 
+-- $intro
+--
 -- 'ScalableServer' is a library that attempts to capture current best
 -- practices for writing fast/scalable socket servers in Haskell.
 --

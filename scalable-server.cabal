@@ -3,11 +3,13 @@ Name:                scalable-server
 Synopsis:            Library for writing fast/scalable TCP-based services
 Description:         Library for writing fast/scalable TCP-based services
 
-Version:             0.1
+Version:             0.1.1
 
 License:             BSD3
 
 License-file:        LICENSE
+
+Homepage:            https://github.com/jamwt/haskell-scalable-server/
 
 Author:              Jamie Turner
 
@@ -27,13 +29,13 @@ Library
   hs-source-dirs:      src
 
   Build-depends: base >=4 && <5,
-                 stm,
+                 stm>=2.2,
                  bytestring >=0.9,
-                 attoparsec >=0.7.2,
-                 enumerator,
-                 attoparsec-enumerator,
-                 network>=2.0,
-                 mtl>=2,
-                 blaze-builder>=0.3
+                 attoparsec >=0.9.1 && < 0.10,
+                 enumerator >= 0.4 && < 0.5,
+                 attoparsec-enumerator >= 0.2 && < 0.3,
+                 network>=2.3,
+                 mtl>=2 && <3,
+                 blaze-builder>=0.3 && <0.4
 
   ghc-options:   -O2
