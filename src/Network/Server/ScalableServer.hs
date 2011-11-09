@@ -7,6 +7,7 @@ module Network.Server.ScalableServer (
     RequestProcessor) where
 
 import Network.Socket
+import Network.Socket.Enumerator (enumSocket)
 import qualified Network.Socket.ByteString as BinSock
 import Network.BSD
 import Control.Exception (finally)
@@ -16,10 +17,7 @@ import Control.Concurrent (forkIO, threadDelay)
 import Control.Concurrent.STM (newTChanIO, writeTChan, readTChan, atomically, TChan)
 import Data.Enumerator (($$), run_)
 import qualified Data.Enumerator as E
-import Data.Enumerator.Binary (enumHandle)
 import Data.Attoparsec.Enumerator (iterParser)
-import System.IO (hSetBuffering, hClose, BufferMode(..),
-    IOMode(..), Handle)
 import Blaze.ByteString.Builder (toByteStringIO, Builder)
 import Data.Enumerator (yield, continue, Iteratee, Stream(..))
 import qualified Data.Attoparsec as Atto
@@ -79,19 +77,17 @@ serverListenLoop pipe s = do
     listen s 100
     forever $ do
         (c, _) <- accept s
-        h <- socketToHandle c ReadMode
-        hSetBuffering h NoBuffering
-        forkIO $ connHandler pipe c h
+        forkIO $ connHandler pipe c
 
-connHandler :: RequestPipeline a -> Socket -> Handle -> IO ()
-connHandler (RequestPipeline reqParse reqProc) s h = do
+connHandler :: RequestPipeline a -> Socket -> IO ()
+connHandler (RequestPipeline reqParse reqProc) s = do
     chan <- newTChanIO
     (do
-        let enum = enumHandle 32768 h
+        let enum = enumSocket 4096 s
         let parser = iterParser reqParse
         void $ forkIO $ processRequests chan reqProc s
         void $ run_ (enum $$ E.sequence parser $$ requestHandler chan s)
-        ) `finally` ( (atomically $ writeTChan chan Nothing) >> hClose h )
+        ) `finally` ( (atomically $ writeTChan chan Nothing) >> sClose s )
 
 requestHandler :: RequestChannel a -> Socket -> Iteratee a IO ()
 requestHandler chan s = do
@@ -109,6 +105,7 @@ processRequests chan proc s = do
     case next of
         Just a -> do
             resp <- proc a -- XXX handle exceptions?
+            -- XXX eventually, pipeline to enumerator?
             toByteStringIO (BinSock.sendAll s) $ resp
             processRequests chan proc s
         Nothing -> return ()
