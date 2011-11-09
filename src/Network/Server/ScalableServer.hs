@@ -14,7 +14,7 @@ import Control.Exception (finally)
 import Control.Monad (forever, liftM, replicateM, void)
 import Control.Monad.Trans (liftIO)
 import Control.Concurrent (forkIO, threadDelay)
-import Control.Concurrent.STM (newTChanIO, writeTChan, readTChan, atomically, TChan)
+import Control.Concurrent.BoundedChan (newBoundedChan, writeChan, readChan, BoundedChan)
 import Data.Enumerator (($$), run_)
 import qualified Data.Enumerator as E
 import Data.Attoparsec.Enumerator (iterParser)
@@ -48,7 +48,7 @@ import qualified Data.ByteString.Lazy.Char8 as B
 -- indicating both a parser/request object generator, the RequestCreator,
 -- and the processor of these requests, one that ultimately generates a
 -- response expressed by a blaze 'Builder'
-data RequestPipeline a = RequestPipeline (RequestCreator a) (RequestProcessor a)
+data RequestPipeline a = RequestPipeline (RequestCreator a) (RequestProcessor a) PipelineSize
 
 -- |The RequestCreator is an Attoparsec parser that yields some request
 -- object 'a'
@@ -57,7 +57,10 @@ type RequestCreator a = Atto.Parser a
 -- |The RequestProcessor is a function in the IO monad (for DB access, etc)
 -- that returns a builder that can generate the response
 type RequestProcessor a = a -> IO Builder
-type RequestChannel a = TChan (Maybe a)
+
+type RequestChannel a  = BoundedChan (Maybe a)
+
+type PipelineSize = Int
 
 -- |Given a pipeline specification and a port, run TCP traffic using the
 -- pipeline for parsing, processing and response.
@@ -80,32 +83,31 @@ serverListenLoop pipe s = do
         forkIO $ connHandler pipe c
 
 connHandler :: RequestPipeline a -> Socket -> IO ()
-connHandler (RequestPipeline reqParse reqProc) s = do
-    chan <- newTChanIO
+connHandler (RequestPipeline reqParse reqProc size) s = do
+    chan <- newBoundedChan size
     (do
         let enum = enumSocket 4096 s
         let parser = iterParser reqParse
         void $ forkIO $ processRequests chan reqProc s
         void $ run_ (enum $$ E.sequence parser $$ requestHandler chan s)
-        ) `finally` ( (atomically $ writeTChan chan Nothing) >> sClose s )
+        ) `finally` ( (writeChan chan Nothing) >> sClose s )
 
 requestHandler :: RequestChannel a -> Socket -> Iteratee a IO ()
 requestHandler chan s = do
     continue requestConsume
   where
     requestConsume (Chunks mrs) = do
-        liftIO $ mapM_ (\m -> atomically $ writeTChan chan $ Just m) mrs
+        liftIO $ mapM_ (\m -> writeChan chan $ Just m) mrs
         continue requestConsume
     requestConsume EOF = do
         yield () EOF
 
 processRequests :: RequestChannel a -> RequestProcessor a -> Socket -> IO ()
 processRequests chan proc s = do
-    next <- atomically $ readTChan chan
+    next <- readChan chan
     case next of
         Just a -> do
             resp <- proc a -- XXX handle exceptions?
-            -- XXX eventually, pipeline to enumerator?
             toByteStringIO (BinSock.sendAll s) $ resp
             processRequests chan proc s
         Nothing -> return ()
