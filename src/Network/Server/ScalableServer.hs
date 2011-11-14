@@ -10,7 +10,7 @@ import Network.Socket
 import Network.Socket.Enumerator (enumSocket)
 import qualified Network.Socket.ByteString as BinSock
 import Network.BSD
-import Control.Exception (finally)
+import Control.Exception (finally, try, throwIO, SomeException)
 import Control.Monad (forever, liftM, replicateM, void)
 import Control.Monad.Trans (liftIO)
 import Control.Concurrent (forkIO, threadDelay)
@@ -107,7 +107,12 @@ processRequests chan proc s = do
     next <- readChan chan
     case next of
         Just a -> do
-            resp <- proc a -- XXX handle exceptions?
-            toByteStringIO (BinSock.sendAll s) $ resp
-            processRequests chan proc s
+            mresp <- try $ proc a
+            case mresp of
+                Right resp -> do
+                    toByteStringIO (BinSock.sendAll s) $ resp
+                    processRequests chan proc s
+                Left (e :: SomeException) -> do
+                    sClose s
+                    throwIO e
         Nothing -> return ()
