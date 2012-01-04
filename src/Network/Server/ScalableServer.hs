@@ -78,9 +78,11 @@ runServer pipe port = do
 serverListenLoop :: RequestPipeline a -> Socket -> IO ()
 serverListenLoop pipe s = do
     listen s 100
-    forever $ do
-        (c, _) <- accept s
-        forkIO $ connHandler pipe c
+    finally (
+        forever $ do
+            (c, _) <- accept s
+            forkIO $ connHandler pipe c
+        ) $ sClose s
 
 connHandler :: RequestPipeline a -> Socket -> IO ()
 connHandler (RequestPipeline reqParse reqProc size) s = do

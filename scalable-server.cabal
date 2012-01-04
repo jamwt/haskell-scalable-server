@@ -3,7 +3,7 @@ Name:                scalable-server
 Synopsis:            Library for writing fast/scalable TCP-based services
 Description:         Library for writing fast/scalable TCP-based services
 
-Version:             0.2.1
+Version:             0.2.2
 
 License:             BSD3
 
