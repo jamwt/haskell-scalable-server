@@ -56,4 +56,7 @@ runServer pipe port = do
 
 processRequest :: RequestPipeline a -> Source IO ByteString -> Sink ByteString IO () -> IO ()
 processRequest (RequestPipeline parser handler) source sink = do
-    source $$ (conduitParser parser) =$= CL.map snd =$= CL.mapM handler =$= builderToByteString =$ sink
+    source $$ (conduitParser parser) =$= CL.map snd =$=
+        CL.mapM handler =$=
+        builderToByteStringWith (allNewBuffersStrategy 0) =$
+        sink
