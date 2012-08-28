@@ -32,6 +32,6 @@ handle (Request _) = do
 main = testServer
 
 testServer = do
-    let definition = RequestPipeline parseRequest handler 10
+    let definition = RequestPipeline parseRequest handler
     void $ forkIO $ runServer definition 6004
     forever $ threadDelay (1000000 * 60)
