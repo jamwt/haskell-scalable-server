@@ -11,10 +11,12 @@ import Network.Socket.Enumerator (enumSocket)
 import qualified Network.Socket.ByteString as BinSock
 import Network.BSD
 import Control.Exception (finally, try, throwIO, SomeException)
-import Control.Monad (forever, liftM, replicateM, void)
+import Control.Monad (forever, liftM, replicateM, void, when)
 import Control.Monad.Trans (liftIO)
 import Control.Concurrent (forkIO, threadDelay)
-import Control.Concurrent.BoundedChan (newBoundedChan, writeChan, readChan, BoundedChan)
+import Control.Concurrent.STM (atomically, retry)
+import Control.Concurrent.STM.TVar (newTVarIO, readTVar, writeTVar, modifyTVar', TVar)
+import Control.Concurrent.STM.TChan (newTChanIO, readTChan, writeTChan, TChan)
 import Data.Enumerator (($$), run_)
 import qualified Data.Enumerator as E
 import Data.Attoparsec.Enumerator (iterParser)
@@ -118,3 +120,27 @@ processRequests chan proc s = do
                     sClose s
                     throwIO e
         Nothing -> return ()
+
+
+-- Homebrew bounded channel
+
+type BoundedChan a = (TVar Int, TChan a)
+
+newBoundedChan :: Int -> IO (BoundedChan a)
+newBoundedChan sz = do
+    a <- newTVarIO sz
+    c <- newTChanIO
+    return (a, c)
+
+readChan :: BoundedChan a -> IO a
+readChan (a, c) = atomically $ do
+    v <- readTChan c
+    modifyTVar' a (+1)
+    return v
+
+writeChan :: BoundedChan a -> a -> IO ()
+writeChan (a, c) i = atomically $ do
+    count <- readTVar a
+    when (count == 0) retry
+    writeTVar a (count - 1)
+    writeTChan c i

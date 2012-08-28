@@ -3,7 +3,7 @@ Name:                scalable-server
 Synopsis:            Library for writing fast/scalable TCP-based services
 Description:         Library for writing fast/scalable TCP-based services
 
-Version:             0.2.2.1
+Version:             0.2.3
 
 License:             BSD3
 
@@ -37,7 +37,7 @@ Library
                  network>=2.3,
                  mtl>=2 && <3,
                  blaze-builder>=0.3 && <0.4,
-                 BoundedChan >=1.0 && < 1.1
+                 stm >=2.4 && < 2.5
 
   Extensions:    ScopedTypeVariables
   ghc-options:   -O2
