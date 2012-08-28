@@ -6,13 +6,12 @@ module Network.Server.ScalableServer (
     RequestPipeline(..), RequestCreator,
     RequestProcessor) where
 
-import Blaze.ByteString.Builder (Builder)
+import Blaze.ByteString.Builder (Builder, toByteString)
 import Data.ByteString
 import Data.Conduit
 import Data.Conduit.List as CL
 import Data.Conduit.Network
 import Data.Conduit.Attoparsec
-import Data.Conduit.Blaze
 import Network.BSD
 import qualified Data.Attoparsec as Atto
 
@@ -57,6 +56,5 @@ runServer pipe port = do
 processRequest :: RequestPipeline a -> Source IO ByteString -> Sink ByteString IO () -> IO ()
 processRequest (RequestPipeline parser handler) source sink = do
     source $$ (conduitParser parser) =$= CL.map snd =$=
-        CL.mapM handler =$=
-        builderToByteStringWith (allNewBuffersStrategy 0) =$
+        CL.mapM handler =$= CL.map toByteString =$=
         sink

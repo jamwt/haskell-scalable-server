@@ -3,7 +3,7 @@ Name:                scalable-server
 Synopsis:            Library for writing fast/scalable TCP-based services
 Description:         Library for writing fast/scalable TCP-based services
 
-Version:             0.3.0
+Version:             0.3.1
 
 License:             BSD3
 
@@ -36,7 +36,6 @@ Library
                  conduit>=0.5&&<0.6,
                  network-conduit>=0.5&&<0.6,
                  attoparsec-conduit>=0.5&&<0.6,
-                 blaze-builder-conduit>=0.5&&<0.6
 
   Extensions:    ScopedTypeVariables
   ghc-options:   -O2
