@@ -7,8 +7,10 @@ module Network.Server.ScalableServer (
     RequestProcessor) where
 
 import Blaze.ByteString.Builder (Builder, toByteString)
+import Control.Monad.Trans (liftIO)
 import Data.ByteString
 import Data.Conduit
+import Data.Conduit.Util (sequenceSink, SequencedSinkResponse(..))
 import Data.Conduit.List as CL
 import Data.Conduit.Network
 import Data.Conduit.Attoparsec
@@ -53,8 +55,11 @@ runServer pipe port = do
     let app = (processRequest pipe)
     runTCPServer (ServerSettings (fromIntegral port) HostAny) app
 
+doReq parser handler = sequenceSink () $ \()-> do
+    next <- sinkParser parser
+    res <- liftIO $ handler next
+    return $ Emit () [toByteString res]
+
 processRequest :: RequestPipeline a -> Source IO ByteString -> Sink ByteString IO () -> IO ()
 processRequest (RequestPipeline parser handler) source sink = do
-    source $$ (conduitParser parser) =$= CL.map snd =$=
-        CL.mapM handler =$= CL.map toByteString =$=
-        sink
+    source $$ doReq parser handler =$= sink
