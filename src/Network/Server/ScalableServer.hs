@@ -8,9 +8,9 @@ module Network.Server.ScalableServer (
 
 import Blaze.ByteString.Builder (Builder, toByteString)
 import Control.Monad.Trans (liftIO)
+import Control.Applicative
 import Data.ByteString
 import Data.Conduit
-import Data.Conduit.Util (sequenceSink, SequencedSinkResponse(..))
 import Data.Conduit.List as CL
 import Data.Conduit.Network
 import Data.Conduit.Attoparsec
@@ -45,21 +45,16 @@ type RequestCreator a = Atto.Parser a
 -- that returns a builder that can generate the response
 type RequestProcessor a = a -> IO Builder
 
--- |Given a pipeline specification and a port, run TCP traffic using the
--- pipeline for parsing, processing and response.
---
--- Note: there is currently no way for a server to specific the socket
--- should be disconnected
 runServer :: RequestPipeline a -> PortNumber -> IO ()
 runServer pipe port = do
     let app = (processRequest pipe)
-    runTCPServer (ServerSettings (fromIntegral port) HostAny) app
+    let settings = serverSettings (fromIntegral port) HostAny
+    runTCPServer settings app
 
-doReq parser handler = sequenceSink () $ \()-> do
-    next <- sinkParser parser
-    res <- liftIO $ handler next
-    return $ Emit () [toByteString res]
-
-processRequest :: RequestPipeline a -> Source IO ByteString -> Sink ByteString IO () -> IO ()
-processRequest (RequestPipeline parser handler) source sink = do
-    source $$ doReq parser handler =$= sink
+processRequest :: RequestPipeline a -> AppData IO -> IO ()
+processRequest (RequestPipeline parser handler) appdata = do
+    let source = appSource appdata
+    let sink = appSink appdata
+    source $$ conduitParser parser =$= CL.mapM wrapHandler =$= sink
+  where
+    wrapHandler (_, n) = toByteString <$> handler n
